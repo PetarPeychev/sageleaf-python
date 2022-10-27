@@ -7,7 +7,7 @@ from sageleaf.lexer import Token, TokenType
 
 @dataclass
 class SyntaxTree:
-    statements: list[Statement]
+    expression: Expression
 
 
 @dataclass
@@ -24,8 +24,17 @@ class Binding:
 
 
 @dataclass
+class Block:
+    statements: list[Statement]
+
+
+@dataclass
 class Real:
     value: float
+    
+@dataclass
+class Identifier:
+    name: str
 
 
 @dataclass
@@ -39,9 +48,10 @@ class Type:
 #     pass
 
 
-Identifier: TypeAlias = str
+@dataclass
+class Expression:
+    value: Real | Identifier | Block
 
-Expression: TypeAlias = Real | Identifier
 
 # Statement: TypeAlias = Binding | TypeDefinition | Expression
 Statement: TypeAlias = Binding | Expression
@@ -49,13 +59,9 @@ Statement: TypeAlias = Binding | Expression
 
 def parse(tokens: list[Token]) -> SyntaxTree:
     idx: int = 0
-    statements: list[Statement] = []
+    _, expression = parse_expression(idx, tokens)
 
-    while idx < len(tokens):
-        idx, statement = parse_statement(idx, tokens)
-        statements.append(statement)
-
-    return SyntaxTree(statements)
+    return SyntaxTree(expression)
 
 
 def parse_statement(idx: int, tokens: list[Token]) -> tuple[int, Statement]:
@@ -81,7 +87,7 @@ def parse_binding(idx: int, tokens: list[Token]) -> tuple[int, Binding]:
             idx, assignment = expect(idx, tokens, TokenType.ASSIGN)
             if assignment:
                 idx, expression = parse_expression(idx, tokens)
-                return idx, Binding(name.value, let_type, expression)
+                return idx, Binding(Identifier(name.value), let_type, expression)
             else:
                 raise Exception(f"Expected assignment at token index {idx}.")
         else:
@@ -93,24 +99,45 @@ def parse_binding(idx: int, tokens: list[Token]) -> tuple[int, Binding]:
 def parse_type(idx: int, tokens: list[Token]) -> tuple[int, Type]:
     idx, name = expect(idx, tokens, TokenType.IDENTIFIER)
     if name:
-        return idx, Type(name.value, [])
+        return idx, Type(Identifier(name.value), [])
     else:
         raise Exception(f"Expected type identifier at token index {idx}.")
 
 
 def parse_expression(idx: int, tokens: list[Token]) -> tuple[int, Expression]:
-    idx, number = expect(idx, tokens, TokenType.NUMBER)
-    if number:
-        return idx, Real(float(number.value))
-    else:
-        idx, identifier = expect(idx, tokens, TokenType.IDENTIFIER)
-        if identifier:
-            return idx, Identifier(identifier.value)
+    idx, start = expect(idx, tokens, TokenType.STARTBLOCK)
+    if start:
+        idx, block = parse_block(idx, tokens)
+        idx, end = expect(idx, tokens, TokenType.ENDBLOCK)
+        if end:
+            return idx, Expression(block)
         else:
-            raise Exception(f"Unrecognised expression at token index {idx}.")
+            raise Exception(f"Expected end of block at token index {idx}.")
+    else:
+        idx, number = expect(idx, tokens, TokenType.NUMBER)
+        if number:
+            return idx, Expression(Real(float(number.value)))
+        else:
+            idx, identifier = expect(idx, tokens, TokenType.IDENTIFIER)
+            if identifier:
+                return idx, Expression(Identifier(identifier.value))
+            else:
+                raise Exception(
+                    f"Unrecognised expression at token index {idx}.")
 
 
-def expect(idx: int, tokens: list[Token], type: TokenType) -> tuple[int, Optional[Token]]:
+def parse_block(idx: int, tokens: list[Token]) -> tuple[int, Block]:
+    statements: list[Statement] = []
+
+    while idx < len(tokens) and tokens[idx].type != TokenType.ENDBLOCK:
+        idx, statement = parse_statement(idx, tokens)
+        statements.append(statement)
+
+    return idx, Block(statements)
+
+
+def expect(idx: int, tokens: list[Token],
+           type: TokenType) -> tuple[int, Optional[Token]]:
     if idx < len(tokens) and tokens[idx].type == type:
         return idx + 1, tokens[idx]
     else:

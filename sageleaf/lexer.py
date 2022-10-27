@@ -31,6 +31,8 @@ class TokenType(Enum):
     IS = auto()
     LPAREN = auto()
     RPAREN = auto()
+    STARTBLOCK = auto()
+    ENDBLOCK = auto()
     LET = auto()
     TYPE = auto()
     OR = auto()
@@ -81,6 +83,12 @@ def lex(source: str) -> list[Token]:
         elif source.startswith(")", idx):
             idx += 1
             tokens.append(Token(TokenType.RPAREN, idx))
+        elif source.startswith("{", idx):
+            idx += 1
+            tokens.append(Token(TokenType.STARTBLOCK, idx))
+        elif source.startswith("}", idx):
+            idx += 1
+            tokens.append(Token(TokenType.ENDBLOCK, idx))
         elif source.startswith(">=", idx):
             idx += 2
             tokens.append(Token(TokenType.GEQUALS, idx))

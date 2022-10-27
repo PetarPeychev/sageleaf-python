@@ -24,7 +24,7 @@ let name: String* = {
    print greeting;
    let name: String* = promptInput "What is your name?";
    name;
-}
+};
 
 If a block contains any effectful expressions (of type A -> B*), then the evaluated type
 of the block will always be effectful:
@@ -32,7 +32,7 @@ of the block will always be effectful:
 let pi: Real* = {
    print "Cooking some delicious Pi...";
    3.1415;
-}
+};
 
 This ensures effectful computation is tracked and propagated.
 
