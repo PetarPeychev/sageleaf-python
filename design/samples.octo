@@ -12,6 +12,33 @@ let result: Real =
    add 7 (increment 5);
 
 
+# Blocks ----------------------------------------------------------------------
+
+Programs are expressions. They evaluate to a single value. In order to have multiple
+statements inside an expression, you need to use a block. Blocks evaluate to the last
+expression statement in the block, but can contain other intermediate bindings or
+expressions, including effectful expressions:
+
+let name: String* = {
+   let greeting: String = "Hello!";
+   print greeting;
+   let name: String* = promptInput "What is your name?";
+   name;
+}
+
+If a block contains any effectful expressions (of type A -> B*), then the evaluated type
+of the block will always be effectful:
+
+let pi: Real* = {
+   print "Cooking some delicious Pi...";
+   3.1415;
+}
+
+This ensures effectful computation is tracked and propagated.
+
+Blocks should generally be avoided if a point-free expression suffices, but may be used
+to simplify some large expressions or do effectful composition.
+
 # Do-style IO -----------------------------------------------------------------
 
 # Do structure evaluates an expression once non-lazily in order.
