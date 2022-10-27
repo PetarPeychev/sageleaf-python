@@ -1,6 +1,6 @@
 from sageleaf.lexer import lex
 from sageleaf.parser import parse_statement
-from sageleaf.interpreter import BASE_BINDINGS, BASE_TYPES, RuntimeEnvironment, interpret_statement
+from sageleaf.interpreter import BASE_BINDINGS, BASE_TYPES, PrimitiveType, RuntimeEnvironment, interpret_statement
 
 
 def main() -> None:
@@ -10,6 +10,13 @@ def main() -> None:
 
     while True:
         line = input("> ")
-        tokens = lex(line)
-        _, statement = parse_statement(0, tokens)
-        environment = interpret_statement(environment, statement)
+        try:
+            tokens = lex(line)
+            _, statement = parse_statement(0, tokens)
+            environment, value = interpret_statement(environment, statement)
+            if isinstance(value.type, PrimitiveType):
+                print(f"{value.python_value} : {value.type.name}")
+            else:
+                print(f"{value.type.name}")
+        except Exception as ex:
+            print(ex)

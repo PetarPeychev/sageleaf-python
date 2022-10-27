@@ -1,0 +1,12 @@
+Expr = Term0 {Term0}.
+Term0 = Term1 {Infix0 Term1}.
+Term1 = Term2 {Infix1 Term2}.
+Term2 = Term3 {Infix2 Term3}.
+Term3 = "(" Expr ")" | Factor.
+Factor = id | Literal.
+
+
+
+
+Expr = Term0 {Term0}.
+Term0 = "(" Expr ")" | Block | id | Literal.

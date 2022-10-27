@@ -31,7 +31,8 @@ class Block:
 @dataclass
 class Real:
     value: float
-    
+
+
 @dataclass
 class Identifier:
     name: str
@@ -50,8 +51,10 @@ class Type:
 
 @dataclass
 class Expression:
-    value: Real | Identifier | Block
+    terms: list[Term]
 
+
+Term: TypeAlias = Block | Real | Identifier
 
 # Statement: TypeAlias = Binding | TypeDefinition | Expression
 Statement: TypeAlias = Binding | Expression
@@ -105,25 +108,35 @@ def parse_type(idx: int, tokens: list[Token]) -> tuple[int, Type]:
 
 
 def parse_expression(idx: int, tokens: list[Token]) -> tuple[int, Expression]:
+    terms = []
+    while idx < len(tokens) and tokens[idx].type != TokenType.BREAK:
+        idx, term = parse_term(idx, tokens)
+        terms.append(term)
+    if len(terms) < 1:
+        raise Exception(f"Expected one or more terms at token index {idx}.")
+    return idx, Expression(terms)
+
+
+def parse_term(idx: int, tokens: list[Token]) -> tuple[int, Term]:
     idx, start = expect(idx, tokens, TokenType.STARTBLOCK)
     if start:
         idx, block = parse_block(idx, tokens)
         idx, end = expect(idx, tokens, TokenType.ENDBLOCK)
         if end:
-            return idx, Expression(block)
+            return idx, block
         else:
             raise Exception(f"Expected end of block at token index {idx}.")
     else:
         idx, number = expect(idx, tokens, TokenType.NUMBER)
         if number:
-            return idx, Expression(Real(float(number.value)))
+            return idx, Real(float(number.value))
         else:
             idx, identifier = expect(idx, tokens, TokenType.IDENTIFIER)
             if identifier:
-                return idx, Expression(Identifier(identifier.value))
+                return idx, Identifier(identifier.value)
             else:
                 raise Exception(
-                    f"Unrecognised expression at token index {idx}.")
+                    f"Unrecognised term at token index {idx}.")
 
 
 def parse_block(idx: int, tokens: list[Token]) -> tuple[int, Block]:
