@@ -1,0 +1,58 @@
+# Beryl Grammar (EBNF) --------------------------------------------------------
+
+<Program> ::= (<Statement> ";\n")*
+
+<Statement> ::= <Binding>
+          | <TypeDefinition>
+          | <Expression>
+
+<Binding> ::= "let" <ws> <Identifier> ":" <ws> <Type> <ws> "=" <ws> <Expression>
+
+<TypeDefinition> ::= "type" <ws> <TypeIdentifier> (<ws> <Type>)* <ws> "=" <ws> (<AlgebraicDataType> | <RefinementType>)
+
+<AlgebraicDataType> ::= <ADTElement> <ws> "and" <ws> <AlgebraicDataType>
+                      | <ADTElement> <ws> "or" <ws> <AlgebraicDataType>
+                      | <ADTElement>
+
+<ADTElement> ::= <TypeIdentifier> (":" <ws> <Type>)?
+
+<RefinementType> ::= <Type> <ws> "where" <ws> <Function>
+
+<Expression> ::= "(" <Expression> ")"
+               | <Function>
+               | <Application>
+               | <Conditional>
+               | <Identifier>
+               | <Literal>
+
+<Function> ::= "\\" <Identifier> (<ws> <Identifier>)* <ws> "->" <ws> <Expression>
+
+<Application> ::= <Identifier> <ws> <Expression>
+
+<Conditional> ::= "if" <ws> <Expression> <ws> "then" <ws> <Expression> <ws> "else" <ws> <Expression>
+
+<Type> ::= <Type> <ws> "->" <ws> <Type>
+     | "Real"
+     | "String"
+     | "Unit"
+     | <PolymorphicType>
+     | <TypeIdentifier>
+
+<PolymorphicType> ::= <TypeIdentifier> <ws> <Type>
+                | <TypeVariable>
+
+<TypeVariable> ::= [a-z]+
+
+/* [A-Z]+[a-zA-Z]* */
+<TypeIdentifier> ::= [A-Z]+ ([a-z] | [A-Z])*
+
+/* [^\s\d]\S* */
+<Identifier> ::= ([a-z] | [A-Z])+ ([a-z] | [A-Z] | [0-9])*
+
+<Literal> ::= <Number>
+        | "Unit"
+
+<Number> ::= ("0" | [1-9] [0-9]*) ("." [0-9]+ )?
+
+<ws> ::= " " | "\t" | "\n"
+
