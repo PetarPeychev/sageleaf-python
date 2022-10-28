@@ -39,10 +39,18 @@ class Identifier:
 
 
 @dataclass
-class Type:
+class PrimitiveType:
     identifier: Identifier
     type_parameters: list[Identifier]
 
+
+@dataclass
+class FunctionType:
+    input_type: Type
+    output_type: Type
+
+
+Type: TypeAlias = PrimitiveType | FunctionType
 
 # @dataclass
 # class TypeBody:
@@ -102,7 +110,13 @@ def parse_binding(idx: int, tokens: list[Token]) -> tuple[int, Binding]:
 def parse_type(idx: int, tokens: list[Token]) -> tuple[int, Type]:
     idx, name = expect(idx, tokens, TokenType.IDENTIFIER)
     if name:
-        return idx, Type(Identifier(name.value), [])
+        first_type = PrimitiveType(Identifier(name.value), [])
+        idx, arrow = expect(idx, tokens, TokenType.ARROW)
+        if arrow:
+            idx, second_type = parse_type(idx, tokens)
+            return idx, FunctionType(first_type, second_type)
+        else:
+            return idx, first_type
     else:
         raise Exception(f"Expected type identifier at token index {idx}.")
 

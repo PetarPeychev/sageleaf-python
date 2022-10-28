@@ -14,9 +14,6 @@ def main() -> None:
             tokens = lex(line)
             _, statement = parse_statement(0, tokens)
             environment, value = interpret_statement(environment, statement)
-            if isinstance(value.type, PrimitiveType):
-                print(f"{value.python_value} : {value.type.name}")
-            else:
-                print(f"{value.type.name}")
+            print(value)
         except Exception as ex:
             print(ex)
