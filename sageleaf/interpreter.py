@@ -55,9 +55,17 @@ class Value:
 
 
 @dataclass
+class Binding:
+    name: str
+    type: p.Type
+    expression: p.Expression
+    environment: RuntimeEnvironment
+
+
+@dataclass
 class RuntimeEnvironment:
     types: dict[str, Type]
-    bindings: dict[str, Value]
+    bindings: dict[str, Binding | Value]
 
 
 BASE_TYPES = {
@@ -142,7 +150,11 @@ def evaluate_term(env: RuntimeEnvironment, term: p.Term) -> Value:
     elif isinstance(term, p.Identifier):
         if term.name not in env.bindings:
             raise Exception(f"Undefined binding {term.name}.")
-        return env.bindings[term.name]
+        binding = env.bindings[term.name]
+        if isinstance(binding, Value):
+            return binding
+        else:
+            return evaluate_binding(binding)
     elif isinstance(term, p.Block):
         block_env = deepcopy(env)
         last_value = BASE_BINDINGS["Unit"]
@@ -159,17 +171,24 @@ def interpret_binding(env: RuntimeEnvironment,
                       binding: p.Binding) -> RuntimeEnvironment:
     binding_type = interpret_type(env, binding.type)
 
-    value = evaluate_expr(env, binding.expression)
-
-    # Type check that the value is a member of the specified type.
-    if binding_type.is_member(value.python_value):
-        env.bindings[binding.identifier.name] = Value(
-            binding_type, value.python_value)
-    else:
-        raise Exception(
-            f"Binding to `{binding.identifier.name}` expected a value of type {binding_type}.")
+    env.bindings[binding.identifier.name] = Binding(
+        binding.identifier.name, binding_type, binding.expression, deepcopy(env))
 
     return env
+
+
+def evaluate_binding(binding: Binding) -> Value:
+    value = evaluate_expr(binding.environment, binding.expression)
+
+    # Type check that the value is a member of the specified type.
+    if binding.type.is_member(value.python_value):
+        binding.environment.bindings[binding.name] = Value(
+            binding.type, value.python_value)
+    else:
+        raise Exception(
+            f"Binding to `{binding.name}` expected a value of type {binding.type}.")
+
+    return value
 
 
 def interpret_type(env: RuntimeEnvironment, type: p.Type) -> Type:
