@@ -6,7 +6,6 @@ from numbers import Real
 
 from sageleaf import parser as p
 
-
 PythonValue: TypeAlias = str | int | float | bool | Callable
 
 
@@ -29,10 +28,16 @@ class FunctionType:
 
     @property
     def name(self) -> str:
-        left = str(self.input_type) if isinstance(
-            self.input_type, PrimitiveType) else f"({self.input_type})"
-        right = str(self.output_type) if isinstance(
-            self.output_type, PrimitiveType) else f"({self.output_type})"
+        left = (
+            str(self.input_type)
+            if isinstance(self.input_type, PrimitiveType)
+            else f"({self.input_type})"
+        )
+        right = (
+            str(self.output_type)
+            if isinstance(self.output_type, PrimitiveType)
+            else f"({self.output_type})"
+        )
         return f"{left} -> {right}"
 
     def __str__(self: FunctionType) -> str:
@@ -48,10 +53,12 @@ class Value:
     python_value: PythonValue
 
     def __str__(self: Value) -> str:
-        if isinstance(self.type, PrimitiveType):
-            return f"{self.python_value} :: {self.type}"
-        elif isinstance(self.type, FunctionType):
+        if isinstance(self.type, FunctionType) or isinstance(
+            self.python_value, Callable
+        ):
             return f"λ :: {self.type}"
+        elif isinstance(self.type, PrimitiveType):
+            return f"{self.python_value} :: {self.type}"
 
 
 @dataclass
@@ -69,7 +76,7 @@ class RuntimeEnvironment:
 
 
 BASE_TYPES = {
-    "Void": PrimitiveType("Any", lambda _: False),
+    "Void": PrimitiveType("Void", lambda _: False),
     "Any": PrimitiveType("Any", lambda _: True),
     "Unit": PrimitiveType("Unit", lambda x: x == "Unit"),
     "Real": PrimitiveType("Real", lambda x: isinstance(x, (float, int))),
@@ -83,19 +90,18 @@ BASE_BINDINGS = {
             FunctionType(
                 BASE_TYPES["Real"],
                 BASE_TYPES["Real"],
-                lambda x: isinstance(x, Callable)
+                lambda x: isinstance(x, Callable),
             ),
-            lambda x: isinstance(x, Callable)
+            lambda x: isinstance(x, Callable),
         ),
-        lambda x: lambda y: x + y
+        lambda x: lambda y: x + y,
     ),
     "print": Value(
         FunctionType(
-            BASE_TYPES["Any"],
-            BASE_TYPES["Unit"],
-            lambda x: isinstance(x, Callable)
+            BASE_TYPES["Any"], BASE_TYPES["Unit"], lambda x: isinstance(
+                x, Callable)
         ),
-        lambda x: [print(x), "Unit"][-1]
+        lambda x: [print(x), "Unit"][-1],
     ),
 }
 
@@ -107,8 +113,8 @@ def interpret(tree: p.SyntaxTree) -> None:
 
 
 def interpret_statement(
-        env: RuntimeEnvironment,
-        statement: p.Statement) -> tuple[RuntimeEnvironment, Value]:
+    env: RuntimeEnvironment, statement: p.Statement
+) -> tuple[RuntimeEnvironment, Value]:
     if isinstance(statement, p.Expression):
         value = evaluate_expr(env, statement)
         return env, value
@@ -118,8 +124,7 @@ def interpret_statement(
         raise Exception(f"Unrecognised statement type {type(statement)}.")
 
 
-def evaluate_expr(env: RuntimeEnvironment,
-                  expr: p.Expression) -> Value:
+def evaluate_expr(env: RuntimeEnvironment, expr: p.Expression) -> Value:
     value = None
     for idx in range(len(expr.terms)):
         new_value = evaluate_term(env, expr.terms[idx])
@@ -138,7 +143,11 @@ def evaluate_application(func: Value, parameter: Value) -> Value:
             return Value(output_type, python_value)
         else:
             raise Exception(
-                f"Function {func} expected a parameter of type {func.type.input_type}.")
+                f"Function {func} expected a parameter of type {func.type.input_type}."
+            )
+    elif func.type == BASE_TYPES["Any"]:
+        python_value = func.python_value(parameter.python_value)
+        return Value(BASE_TYPES["Any"], python_value)
     else:
         raise Exception(
             f"Attempting to apply a non-function type {func.type}.")
@@ -159,20 +168,21 @@ def evaluate_term(env: RuntimeEnvironment, term: p.Term) -> Value:
         block_env = deepcopy(env)
         last_value = BASE_BINDINGS["Unit"]
         for statement in term.statements:
-            block_env, last_value = interpret_statement(
-                block_env, statement)
+            block_env, last_value = interpret_statement(block_env, statement)
         return last_value
     else:
-        raise Exception(
-            f"Unrecognised term type {type(term)}.")
+        raise Exception(f"Unrecognised term type {type(term)}.")
 
 
-def interpret_binding(env: RuntimeEnvironment,
-                      binding: p.Binding) -> RuntimeEnvironment:
+def interpret_binding(
+    env: RuntimeEnvironment, binding: p.Binding
+) -> RuntimeEnvironment:
     binding_type = interpret_type(env, binding.type)
 
     env.bindings[binding.identifier.name] = Binding(
-        binding.identifier.name, binding_type, binding.expression, deepcopy(env))
+        binding.identifier.name, binding_type, binding.expression, deepcopy(
+            env)
+    )
 
     return env
 
@@ -182,13 +192,11 @@ def evaluate_binding(binding: Binding) -> Value:
 
     # Type check that the value is a member of the specified type.
     if binding.type.is_member(value.python_value):
-        binding.environment.bindings[binding.name] = Value(
-            binding.type, value.python_value)
+        return Value(binding.type, value.python_value)
     else:
         raise Exception(
-            f"Binding to `{binding.name}` expected a value of type {binding.type}.")
-
-    return value
+            f"Binding to `{binding.name}` expected a value of type {binding.type}."
+        )
 
 
 def interpret_type(env: RuntimeEnvironment, type: p.Type) -> Type:
@@ -201,5 +209,5 @@ def interpret_type(env: RuntimeEnvironment, type: p.Type) -> Type:
         return FunctionType(
             interpret_type(env, type.input_type),
             interpret_type(env, type.output_type),
-            lambda x: isinstance(x, Callable)
+            lambda x: isinstance(x, Callable),
         )

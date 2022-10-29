@@ -70,6 +70,11 @@ Statement: TypeAlias = Binding | Expression
 
 def parse(tokens: list[Token]) -> SyntaxTree:
     idx: int = 0
+
+    tokens = (
+        [Token(TokenType.STARTBLOCK, None)] + tokens + [Token(TokenType.ENDBLOCK, None)]
+    )
+
     _, expression = parse_expression(idx, tokens)
 
     return SyntaxTree(expression)
@@ -149,8 +154,7 @@ def parse_term(idx: int, tokens: list[Token]) -> tuple[int, Term]:
             if identifier:
                 return idx, Identifier(identifier.value)
             else:
-                raise Exception(
-                    f"Unrecognised term at token index {idx}.")
+                raise Exception(f"Unrecognised term at token index {idx}.")
 
 
 def parse_block(idx: int, tokens: list[Token]) -> tuple[int, Block]:
@@ -163,8 +167,9 @@ def parse_block(idx: int, tokens: list[Token]) -> tuple[int, Block]:
     return idx, Block(statements)
 
 
-def expect(idx: int, tokens: list[Token],
-           type: TokenType) -> tuple[int, Optional[Token]]:
+def expect(
+    idx: int, tokens: list[Token], type: TokenType
+) -> tuple[int, Optional[Token]]:
     if idx < len(tokens) and tokens[idx].type == type:
         return idx + 1, tokens[idx]
     else:
