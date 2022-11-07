@@ -62,17 +62,28 @@ class Expression:
     terms: list[Term]
 
 
+@dataclass
+class Import:
+    path: list[str]
+
+
+@dataclass
+class Export:
+    names: list[str]
+
+
 Term: TypeAlias = Block | Real | Identifier
 
 # Statement: TypeAlias = Binding | TypeDefinition | Expression
-Statement: TypeAlias = Binding | Expression
+Statement: TypeAlias = Binding | Expression | Import | Export
 
 
 def parse(tokens: list[Token]) -> SyntaxTree:
     idx: int = 0
 
     tokens = (
-        [Token(TokenType.STARTBLOCK, None)] + tokens + [Token(TokenType.ENDBLOCK, None)]
+        [Token(TokenType.STARTBLOCK, None)] + tokens +
+        [Token(TokenType.ENDBLOCK, None)]
     )
 
     _, expression = parse_expression(idx, tokens)
@@ -84,6 +95,35 @@ def parse_statement(idx: int, tokens: list[Token]) -> tuple[int, Statement]:
     statement = None
     if tokens[idx].type == TokenType.LET:
         idx, statement = parse_binding(idx, tokens)
+    elif tokens[idx].type == TokenType.IMPORT:
+        idx += 1
+        path = []
+        while tokens[idx].type != TokenType.BREAK:
+            if tokens[idx].type == TokenType.IDENTIFIER:
+                path.append(tokens[idx].value)
+                idx += 1
+            elif tokens[idx].type == TokenType.STAR:
+                path.append("*")
+                idx += 1
+            elif tokens[idx].type == TokenType.DOT:
+                idx += 1
+            else:
+                raise Exception(
+                    f"Unexpected token in import statement {tokens[idx]}.")
+        return idx, Import(path)
+    elif tokens[idx].type == TokenType.EXPORT:
+        idx += 1
+        names = []
+        while tokens[idx].type != TokenType.BREAK:
+            if tokens[idx].type == TokenType.IDENTIFIER:
+                names.append(tokens[idx].value)
+                idx += 1
+            elif tokens[idx].type == TokenType.COMMA:
+                idx += 1
+            else:
+                raise Exception(
+                    f"Unexpected token in export statement {tokens[idx]}.")
+        return idx, Export(names)
     else:
         idx, statement = parse_expression(idx, tokens)
     idx, end = expect(idx, tokens, TokenType.BREAK)

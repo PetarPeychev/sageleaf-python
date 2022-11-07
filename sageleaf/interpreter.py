@@ -120,6 +120,10 @@ def interpret_statement(
         return env, value
     elif isinstance(statement, p.Binding):
         return interpret_binding(env, statement), BASE_BINDINGS["Unit"]
+    elif isinstance(statement, p.Import):
+        pass
+    elif isinstance(statement, p.Export):
+        pass
     else:
         raise Exception(f"Unrecognised statement type {type(statement)}.")
 

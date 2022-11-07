@@ -14,6 +14,8 @@ class Token:
 
 class TokenType(Enum):
     BREAK = auto()
+    DOT = auto()
+    COMMA = auto()
     NUMBER = auto()
     IDENTIFIER = auto()
     COLON = auto()
@@ -41,6 +43,8 @@ class TokenType(Enum):
     THEN = auto()
     ELSE = auto()
     WHERE = auto()
+    IMPORT = auto()
+    EXPORT = auto()
 
 
 def lex(source: str) -> list[Token]:
@@ -50,6 +54,12 @@ def lex(source: str) -> list[Token]:
     while idx < len(source):
         if source.startswith((" ", "\t", "\n"), idx):
             idx += 1
+        elif source.startswith(".", idx):
+            idx += 1
+            tokens.append(Token(TokenType.DOT, idx))
+        elif source.startswith(",", idx):
+            idx += 1
+            tokens.append(Token(TokenType.COMMA, idx))
         elif source.startswith(";", idx):
             idx += 1
             tokens.append(Token(TokenType.BREAK, idx))
@@ -70,7 +80,7 @@ def lex(source: str) -> list[Token]:
             tokens.append(Token(TokenType.MINUS, idx))
         elif source.startswith("*", idx):
             idx += 1
-            tokens.append(Token(TokenType.MULTIPLY, idx))
+            tokens.append(Token(TokenType.STAR, idx))
         elif source.startswith("/", idx):
             idx += 1
             tokens.append(Token(TokenType.DIVIDE, idx))
@@ -128,6 +138,12 @@ def lex(source: str) -> list[Token]:
         elif source.startswith("where", idx):
             idx += 5
             tokens.append(Token(TokenType.WHERE, idx))
+        elif source.startswith("import", idx):
+            idx += 6
+            tokens.append(Token(TokenType.IMPORT, idx))
+        elif source.startswith("export", idx):
+            idx += 6
+            tokens.append(Token(TokenType.EXPORT, idx))
         elif re.match(r"[.\d]", source[idx]):
             idx, number = lex_number(idx, source)
             tokens.append(number)
