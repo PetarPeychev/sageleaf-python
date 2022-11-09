@@ -1,3 +1,3 @@
-let PI: Real = 3.1415;
+def pi as 3.14;
 
-PI;
+pi;

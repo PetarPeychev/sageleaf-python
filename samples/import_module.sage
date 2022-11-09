@@ -1,3 +1,3 @@
-import module.*;
+import module;
 
-increment pi;
+module.increment module.pi;

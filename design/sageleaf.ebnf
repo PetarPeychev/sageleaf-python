@@ -1,0 +1,40 @@
+# https://bnfplayground.pauliankline.com/
+
+<ws> ::= " " | "\t" | "\n"
+
+<str> ::= "\"" ([a-z] | [A-Z] | [0-9])* "\""
+
+<num> ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+ )?
+
+<bool> ::= "true" | "false"
+
+<lit> ::= <num> | <str> | <bool> | "unit"
+
+<id> ::= ([a-z] | [A-Z])+ ([a-z] | [A-Z] | [0-9])*
+
+<appl> ::= <ws> <expr> <appl> | E
+
+<seq> ::= "[" (<expr> ("," <ws> <expr>)*)? "]"
+
+<set> ::= "{" (<expr> ("," <ws> <expr>)*)? "}"
+
+<arc> ::= "(" <expr> <ws> "->" <ws> <expr> ")"
+
+<expr> ::= "(" <expr> ")" <appl>
+         | "\\" <id> <ws> "->" <ws> <expr> <appl>
+         | "if" <ws> <expr> <ws> "then" <ws> <expr> <ws> "else" <ws> <expr> <appl>
+         | "let" <ws> <id> <ws> "be" <ws> <expr> <ws> "in" <expr> <appl>
+         | "do" <ws> <expr> <ws> "then" <ws> <expr> <appl>
+         | <seq> <appl>
+         | <set> <appl>
+         | <arc> <appl>
+         | <lit> <appl>
+         | <id> <appl>
+
+<mod> ::= "../"* <id> ("." <id>)*
+
+<stmnt> ::= <expr>
+          | "define" <ws> <id> <ws> "as" <ws> <expr>
+          | "import" <ws> <mod>
+
+<prog> ::= (<stmnt> ";" "\n"*)*

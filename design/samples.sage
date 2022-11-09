@@ -162,7 +162,7 @@ let readTwoFiles: String -> String -> Pair(Maybe[String], Maybe[String]) =
 // when sequentially, but evaluation is delayed to when necessary and may be
 // left unevaluated. They can be parallelised or memoised
 let x: Real = 42;
-let add: Real -> Real -> Real = \x -> y -> x + y;
+let add: Real -> Real -> Real = \x -> \y -> x + y;
 let increment: Real -> Real = add 1;
 let result: Real = add 7 (increment 5);
 
