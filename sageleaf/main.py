@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-from sageleaf.lexer import lex
-from sageleaf.parser import parse_statement, parse
+from sageleaf.syntax import lex
+from sageleaf.semantics import parse_statement, parse
 from sageleaf.interpreter import (
     BASE_BINDINGS,
     BASE_TYPES,

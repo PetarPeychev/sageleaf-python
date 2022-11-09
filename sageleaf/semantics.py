@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TypeAlias, Optional
 from dataclasses import dataclass
 
-from sageleaf.lexer import Token, TokenType
+from sageleaf.syntax import Token, TokenType
 
 
 @dataclass

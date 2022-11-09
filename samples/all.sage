@@ -21,3 +21,24 @@ def not as {negtrue, negfalse};
 not (not (not true)); # evaluates to false
 
 print "Hello, World!";
+
+import ../../math/algebra;
+
+def true as 1;
+def false as 0;
+
+def not as \\x ->
+  if (eq x true)
+  then false
+  else true;
+
+def and as {
+  ([true, true] -> true),
+  ([true, false] -> false),
+  ([false, true] -> false),
+  ([false, false] -> false)
+};
+
+if (and true false)
+then print "Wrong Result!"
+else print "CORRECT!";

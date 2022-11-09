@@ -24,7 +24,6 @@ class TT(Enum):
     ARROW = auto()
 
     # literals
-    NUMBER = auto()
     STRING = auto()
 
     # keywords
@@ -39,11 +38,8 @@ class TT(Enum):
     ELSE = auto()
     UNIT = auto()
 
-    # identifiers
+    # identifiers including any numbers
     ID = auto()
-
-    # end of file
-    EOF = auto()
 
 
 @dataclass
@@ -63,14 +59,40 @@ class T:
             return False
 
     def __str__(self):
-        return f"{self.tt}: {self.lexeme}"
+        return f"{self.tt}({self.lexeme})"
 
     def __repr__(self):
         return str(self)
 
 
 PATTERNS = {
-    r"^[ \t\n]+$": TT.WS,
+    r"[ \t\n]+": TT.WS,
+    r";": TT.SEMICOLON,
+    r",": TT.COMMA,
+    r"\\": TT.FSLASH,
+    r"\(": TT.LPAREN,
+    r"\)": TT.RPAREN,
+    r"\{": TT.LCURLY,
+    r"\}": TT.RCURLY,
+    r"\[": TT.LSQUARE,
+    r"\]": TT.RSQUARE,
+
+    r"->": TT.ARROW,
+
+    r"\".*\"": TT.STRING,
+
+    r"import": TT.IMPORT,
+    r"def": TT.DEF,
+    r"as": TT.AS,
+    r"let": TT.LET,
+    r"be": TT.BE,
+    r"in": TT.IN,
+    r"if": TT.IF,
+    r"then": TT.THEN,
+    r"else": TT.ELSE,
+    r"unit": TT.UNIT,
+
+    r"[^ \t\n;,\\\(\)\[\]\{\}\"]+": TT.ID,  # any symbol not used otherwise
 }
 
 

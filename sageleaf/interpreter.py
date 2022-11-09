@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Optional, Callable, Any, TypeAlias
 from numbers import Real
 
-from sageleaf import parser as p
+from sageleaf import semantics as p
 
 PythonValue: TypeAlias = str | int | float | bool | Callable
 
