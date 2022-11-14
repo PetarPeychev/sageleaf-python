@@ -91,13 +91,21 @@ class Parser:
 
     def p_expr(self):
         exprs = []
-        while self._check(TT.LPAREN, TT.LCURLY, TT.STRING, TT.ID):
+        while self._check(TT.LPAREN, TT.LET, TT.LCURLY, TT.STRING, TT.ID):
             expr = None
             if self._check(TT.LPAREN):
                 self._advance()
                 expr = self.p_expr()
                 self._match_or_error(
                     TT.RPAREN, msg="Expected end of parentheses in expression.")
+            elif self._check(TT.LET):
+                self._advance()
+                idf = self._match_or_error(TT.ID, msg="")
+                self._match_or_error(TT.BE, msg="")
+                subexpr1 = self.p_expr()
+                self._match_or_error(TT.IN, msg="")
+                subexpr2 = self.p_expr()
+                expr = ast.Let(idf, subexpr1, subexpr2)
             elif self._check(TT.LCURLY):
                 expr = self.p_map()
             elif self._check(TT.STRING):

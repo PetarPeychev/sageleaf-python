@@ -30,6 +30,13 @@ class Map:
 
 
 @dataclass
+class Let:
+    idf: str
+    expr1: Expr
+    expr2: Expr
+
+
+@dataclass
 class Str:
     string: str
 
@@ -41,6 +48,6 @@ class Num:
 
 Idf = str
 
-Expr = Appl | Map | Str | Num | Idf
+Expr = Appl | Let | Map | Str | Num | Idf
 
 Stmnt = Imp | Def | Expr

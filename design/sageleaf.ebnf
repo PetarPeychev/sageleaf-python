@@ -28,7 +28,7 @@
 
 <expr> ::= "(" <expr> ")" <appl>
         #  | "if" <ws> <expr> <ws> "then" <ws> <expr> <ws> "else" <ws> <expr> <appl>
-        #  | "let" <ws> <id> <ws> "be" <ws> <expr> <ws> "in" <expr> <appl>
+         | "let" <ws> <id> <ws> "be" <ws> <expr> <ws> "in" <expr> <appl>
         #  | "do" <ws> <expr> <ws> "then" <ws> <expr>
         #  | <seq> <appl>
         #  | <set> <appl>
