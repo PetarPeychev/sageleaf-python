@@ -1,216 +1,129 @@
 from __future__ import annotations
-from typing import TypeAlias, Optional
-from dataclasses import dataclass
 
-from sageleaf.syntax import Token, TokenType
-
-
-@dataclass
-class SyntaxTree:
-    expression: Expression
+from sageleaf.syntax import T, TT
+from sageleaf import ast
+import functools
 
 
-@dataclass
-class Binding:
-    identifier: Identifier
-    type: Type
-    expression: Expression
+class SemanticError(Exception):
+    """Error during semantic analysis of sageleaf code."""
 
 
-# @dataclass
-# class TypeDefinition:
-#     identifier: str
-#     body: TypeBody
+class Parser:
+    def __init__(self, ts):
+        self._ts = ts
+        self._idx = 0
 
+    def _error(self, message):
+        raise SemanticError(
+            f"[token {self._ts[self._idx]}] Error: {message}")
 
-@dataclass
-class Block:
-    statements: list[Statement]
+    def _at_end(self):
+        return self._idx >= len(self._ts)
 
+    def _match(self, *tts):
+        if self._check(tts):
+            self._advance()
+            return True
+        return False
 
-@dataclass
-class Real:
-    value: float
+    def _match_or_error(self, *tts, msg):
+        for tt in tts:
+            if self._check(tt):
+                self._advance()
+                return self._previous()
+        self._error(msg)
 
+    def _check(self, *tts):
+        for tt in tts:
+            if self._peek().tt == tt:
+                return True
+        return False
 
-@dataclass
-class Identifier:
-    name: str
-
-
-@dataclass
-class PrimitiveType:
-    identifier: Identifier
-    type_parameters: list[Identifier]
-
-
-@dataclass
-class FunctionType:
-    input_type: Type
-    output_type: Type
-
-
-Type: TypeAlias = PrimitiveType | FunctionType
-
-# @dataclass
-# class TypeBody:
-#     pass
-
-
-@dataclass
-class Expression:
-    terms: list[Term]
-
-
-@dataclass
-class Import:
-    path: list[str]
-
-
-@dataclass
-class Export:
-    names: list[str]
-
-
-Term: TypeAlias = Block | Real | Identifier
-
-# Statement: TypeAlias = Binding | TypeDefinition | Expression
-Statement: TypeAlias = Binding | Expression | Import | Export
-
-
-def parse(tokens: list[Token]) -> SyntaxTree:
-    idx: int = 0
-
-    tokens = (
-        [Token(TokenType.STARTBLOCK, None)] + tokens +
-        [Token(TokenType.ENDBLOCK, None)]
-    )
-
-    _, expression = parse_expression(idx, tokens)
-
-    return SyntaxTree(expression)
-
-
-def parse_statement(idx: int, tokens: list[Token]) -> tuple[int, Statement]:
-    statement = None
-    if tokens[idx].type == TokenType.LET:
-        idx, statement = parse_binding(idx, tokens)
-    elif tokens[idx].type == TokenType.IMPORT:
-        idx += 1
-        path = []
-        while tokens[idx].type != TokenType.BREAK:
-            if tokens[idx].type == TokenType.IDENTIFIER:
-                path.append(tokens[idx].value)
-                idx += 1
-            elif tokens[idx].type == TokenType.STAR:
-                path.append("*")
-                idx += 1
-            elif tokens[idx].type == TokenType.DOT:
-                idx += 1
-            else:
-                raise Exception(
-                    f"Unexpected token in import statement {tokens[idx]}.")
-        return idx, Import(path)
-    elif tokens[idx].type == TokenType.EXPORT:
-        idx += 1
-        names = []
-        while tokens[idx].type != TokenType.BREAK:
-            if tokens[idx].type == TokenType.IDENTIFIER:
-                names.append(tokens[idx].value)
-                idx += 1
-            elif tokens[idx].type == TokenType.COMMA:
-                idx += 1
-            else:
-                raise Exception(
-                    f"Unexpected token in export statement {tokens[idx]}.")
-        return idx, Export(names)
-    else:
-        idx, statement = parse_expression(idx, tokens)
-    idx, end = expect(idx, tokens, TokenType.BREAK)
-    if end:
-        return idx, statement
-    else:
-        raise Exception(f"Expected statement break at token index {idx}.")
-
-
-def parse_binding(idx: int, tokens: list[Token]) -> tuple[int, Binding]:
-    idx, _ = expect(idx, tokens, TokenType.LET)
-    idx, name = expect(idx, tokens, TokenType.IDENTIFIER)
-    if name:
-        idx, colon = expect(idx, tokens, TokenType.COLON)
-        if colon:
-            idx, let_type = parse_type(idx, tokens)
-            idx, assignment = expect(idx, tokens, TokenType.ASSIGN)
-            if assignment:
-                idx, expression = parse_expression(idx, tokens)
-                return idx, Binding(Identifier(name.value), let_type, expression)
-            else:
-                raise Exception(f"Expected assignment at token index {idx}.")
+    def _advance(self):
+        if not self._at_end():
+            self._idx += 1
+            return self._previous()
         else:
-            raise Exception(f"Expected colon at token index {idx}.")
-    else:
-        raise Exception(f"Expected identifier at token index {idx}.")
+            return None
 
-
-def parse_type(idx: int, tokens: list[Token]) -> tuple[int, Type]:
-    idx, name = expect(idx, tokens, TokenType.IDENTIFIER)
-    if name:
-        first_type = PrimitiveType(Identifier(name.value), [])
-        idx, arrow = expect(idx, tokens, TokenType.ARROW)
-        if arrow:
-            idx, second_type = parse_type(idx, tokens)
-            return idx, FunctionType(first_type, second_type)
+    def _peek(self):
+        if not self._at_end():
+            return self._ts[self._idx]
         else:
-            return idx, first_type
-    else:
-        raise Exception(f"Expected type identifier at token index {idx}.")
+            return None
 
-
-def parse_expression(idx: int, tokens: list[Token]) -> tuple[int, Expression]:
-    terms = []
-    while idx < len(tokens) and tokens[idx].type != TokenType.BREAK:
-        idx, term = parse_term(idx, tokens)
-        terms.append(term)
-    if len(terms) < 1:
-        raise Exception(f"Expected one or more terms at token index {idx}.")
-    return idx, Expression(terms)
-
-
-def parse_term(idx: int, tokens: list[Token]) -> tuple[int, Term]:
-    idx, start = expect(idx, tokens, TokenType.STARTBLOCK)
-    if start:
-        idx, block = parse_block(idx, tokens)
-        idx, end = expect(idx, tokens, TokenType.ENDBLOCK)
-        if end:
-            return idx, block
+    def _previous(self):
+        if self._idx > 0:
+            return self._ts[self._idx - 1]
         else:
-            raise Exception(f"Expected end of block at token index {idx}.")
-    else:
-        idx, number = expect(idx, tokens, TokenType.NUMBER)
-        if number:
-            return idx, Real(float(number.value))
+            return None
+
+    def parse(self):
+        stmnts = []
+        while not self._at_end():
+            stmnts.append(self.p_stmnt())
+            self._match_or_error(
+                TT.SEMICOLON, msg="Expected semicolon at end of statement.")
+        return ast.Prog(stmnts)
+
+    def p_stmnt(self):
+        if self._check(TT.IMPORT):
+            return self.p_import()
+        elif self._check(TT.DEF):
+            return self.p_def()
         else:
-            idx, identifier = expect(idx, tokens, TokenType.IDENTIFIER)
-            if identifier:
-                return idx, Identifier(identifier.value)
-            else:
-                raise Exception(f"Unrecognised term at token index {idx}.")
+            self._error("Unrecognised start of statement.")
 
+    def p_import(self):
+        self._advance()
+        idf = self._match_or_error(
+            TT.ID, msg="Expected module identifier in import statement.")
+        return ast.Imp(idf)
 
-def parse_block(idx: int, tokens: list[Token]) -> tuple[int, Block]:
-    statements: list[Statement] = []
+    def p_def(self):
+        self._advance()
+        idf = self._match_or_error(
+            TT.ID, msg="Expected identifier in def statement.")
+        self._match_or_error(TT.AS, msg="Expected 'as' in def statement.")
+        expr = self.p_expr()
+        return ast.Def(idf.lexeme, expr)
 
-    while idx < len(tokens) and tokens[idx].type != TokenType.ENDBLOCK:
-        idx, statement = parse_statement(idx, tokens)
-        statements.append(statement)
+    def p_expr(self):
+        exprs = []
+        while self._check(TT.LPAREN, TT.LCURLY, TT.STRING, TT.ID):
+            expr = None
+            if self._check(TT.LPAREN):
+                self._advance()
+                expr = self.p_expr()
+                self._match_or_error(
+                    TT.RPAREN, msg="Expected end of parentheses in expression.")
+            elif self._check(TT.LCURLY):
+                expr = self.p_map()
+            elif self._check(TT.STRING):
+                string = self._advance().lexeme[1:-1]
+                expr = ast.Str(string)
+            elif self._check(TT.ID):
+                idf = self._advance().lexeme
+                if self.p_num(idf):
+                    expr = self.p_num(idf)
+                else:
+                    expr = idf
+            exprs.append(expr)
 
-    return idx, Block(statements)
+        if len(exprs) == 0:
+            self._error("Unrecognised start of expression.")
+        elif len(exprs) == 1:
+            return exprs[0]
+        else:
+            appl = functools.reduce(lambda e1, e2: ast.Appl(e1, e2), exprs)
+            return appl
 
+    def p_num(self, idf):
+        try:
+            return float(idf)
+        except:
+            return None
 
-def expect(
-    idx: int, tokens: list[Token], type: TokenType
-) -> tuple[int, Optional[Token]]:
-    if idx < len(tokens) and tokens[idx].type == type:
-        return idx + 1, tokens[idx]
-    else:
-        return idx, None
+    def p_map(self):
+        raise NotImplementedError()

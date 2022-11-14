@@ -1,24 +1,63 @@
 import module;
 
-def subtract as
-  \x -> \y ->
-    add x (negate y);
+# :: {Any}
+def AnyValue as {any _};
+
+# :: {Complex}
+def AnyNegative as {any x where x < 0};
+
+# :: {(Boolean -> Boolean)}
+def not as {
+  true -> false,
+  false -> true
+};
+
+# :: {(Complex -> Complex)}
+def abs as {
+  (any x where x < 0 -> negate x),
+  (any x -> x)
+};
+
+# :: {(Complex -> Complex)}
+def subtract as {
+  (any x -> {
+    (any y -> add x (negate y))
+  })
+};
+
+# :: {(Integer -> Integer), (String -> String)}
+def + as {
+  (any x where Integer x -> {
+    (any y where Integer y ->
+      add x y)}),
+
+  (any a where String a -> {
+    (any b where String b ->
+      cat a b)})
+};
+
++ 10 18; # 28
++ "Hello, " "World!"; # Hello, World!
+
+# :: {Integer}
+def NegativeInteger as {
+  any x where and (Integer x) (< x 0)
+};
+
+# :: {Any}
+def Any as {any _};
+
+# ::
+def IntegersAndBoolsAndUnit as {
+  true,
+  false,
+  unit,
+  any x where Integer x
+};
 
 def true as 1;
 def false as 0;
 def Boolean as {true, false};
-
-def negtrue as (true -> false);
-def negfalse as (false -> true);
-
-# applying arcs as functions
-negt true; # evaluates to false
-negf false; # evaluates to true
-
-def not as {negtrue, negfalse};
-
-# applying sets of arcs (maps) as functions
-not (not (not true)); # evaluates to false
 
 print "Hello, World!";
 
@@ -27,10 +66,15 @@ import ../../math/algebra;
 def true as 1;
 def false as 0;
 
-def not as \\x ->
+def not as \x ->
   if (eq x true)
   then false
   else true;
+
+def not as {
+  (true -> false),
+  (false -> true)
+};
 
 def and as {
   ([true, true] -> true),

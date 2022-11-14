@@ -14,27 +14,34 @@
 
 <appl> ::= <ws> <expr> <appl> | E
 
-<seq> ::= "[" (<expr> ("," <ws> <expr>)*)? "]"
+# <arc> ::= "(" <expr> <ws> "->" <ws> <expr> ")"
 
-<set> ::= "{" (<expr> ("," <ws> <expr>)*)? "}"
+# <edge> ::= "(" <expr> <ws> "--" <ws> <expr> ")"
 
-<arc> ::= "(" <expr> <ws> "->" <ws> <expr> ")"
+# <seq> ::= "[" (<expr> (("," <ws> <expr>)* | "for" <ws> <id> <ws> "from" <ws> <num> (<ws> "to" <ws> <num>)?))? "]"
+
+# <set> ::= "{" (<expr> ("," <ws> <expr>)*)? "}"
+
+<map> ::= "{" (<expr> "->" <expr> ("," <ws> <expr> "->" <expr>)*)? "}"
+
+# <graph> ::= "[" (<expr> ("->" | "--") <expr> ("," <ws> <expr> ("->" | "--") <expr>)*)? "]"
 
 <expr> ::= "(" <expr> ")" <appl>
-         | "\\" <id> <ws> "->" <ws> <expr> <appl>
-         | "if" <ws> <expr> <ws> "then" <ws> <expr> <ws> "else" <ws> <expr> <appl>
-         | "let" <ws> <id> <ws> "be" <ws> <expr> <ws> "in" <expr> <appl>
-         | "do" <ws> <expr> <ws> "then" <ws> <expr> <appl>
-         | <seq> <appl>
-         | <set> <appl>
-         | <arc> <appl>
+        #  | "if" <ws> <expr> <ws> "then" <ws> <expr> <ws> "else" <ws> <expr> <appl>
+        #  | "let" <ws> <id> <ws> "be" <ws> <expr> <ws> "in" <expr> <appl>
+        #  | "do" <ws> <expr> <ws> "then" <ws> <expr>
+        #  | <seq> <appl>
+        #  | <set> <appl>
+         | <map> <appl>
+        #  | <graph> <appl>
+        #  | <arc> <appl>
+        #  | <edge> <appl>
          | <lit> <appl>
          | <id> <appl>
 
 <mod> ::= "../"* <id> ("." <id>)*
 
-<stmnt> ::= <expr>
-          | "define" <ws> <id> <ws> "as" <ws> <expr>
+<stmnt> ::= "def" <ws> <id> <ws> "as" <ws> <expr>
           | "import" <ws> <mod>
 
 <prog> ::= (<stmnt> ";" "\n"*)*

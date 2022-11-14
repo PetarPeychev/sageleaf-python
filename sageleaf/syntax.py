@@ -69,7 +69,6 @@ PATTERNS = {
     r"[ \t\n]+": TT.WS,
     r";": TT.SEMICOLON,
     r",": TT.COMMA,
-    r"\\": TT.FSLASH,
     r"\(": TT.LPAREN,
     r"\)": TT.RPAREN,
     r"\{": TT.LCURLY,
@@ -92,7 +91,7 @@ PATTERNS = {
     r"else": TT.ELSE,
     r"unit": TT.UNIT,
 
-    r"[^ \t\n;,\\\(\)\[\]\{\}\"]+": TT.ID,  # any symbol not used otherwise
+    r"[^ \t\n;,\(\)\[\]\{\}\"]+": TT.ID,  # any symbol not used otherwise
 }
 
 

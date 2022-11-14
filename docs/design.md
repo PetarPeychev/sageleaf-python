@@ -227,3 +227,37 @@ all operations in the definition can be run on. There is a type check step.
 
 *Function types are arcs between sets:*
 not :: {(Boolean -> Boolean)}
+
+# Infinite Data Structures
+Sageleaf is not generally a lazy or purely functional language, although by
+way of a few tricks, infinite data structures are supported in the language.
+
+## Infinite Sets
+Since sets are simply understood as their membership function, it's possible to
+define a set by supplying such a function as a predicate in the definition:
+```sage
+def PositiveNumbers as {any x where x > 0};
+```
+
+This functionally creates an *infinite* set of elements, but since iterating
+over a set is not supported, this doesn't cause any issues.
+
+# Infinite Sequences
+Infinite sequences are also possible, although with some limitations. Infinite
+sequences are defined by a generator function which computes each element in
+the set based on the index. This can be though of as the equivalent of sigma
+notation in mathematics for defining infinite series:
+```sage
+def EvenNumbers as [all * n 2 for n from 1];
+```
+
+Analogously to sigma in mathematics, finite sequences can also be defined this
+way and lazily evaluated:
+```sage
+def First10EvenNumbers as [all * n 2 for n from 1 to 10]
+```
+
+# Infinite Maps
+```sage
+def
+```
