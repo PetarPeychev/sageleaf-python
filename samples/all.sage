@@ -27,8 +27,8 @@ def subtract as {
 
 # :: {(Integer -> Integer), (String -> String)}
 def + as {
-  (any x where Integer x -> {
-    (any y where Integer y ->
+  (any x where int? x -> {
+    (any y where int? y ->
       add x y)}),
 
   (any a where String a -> {

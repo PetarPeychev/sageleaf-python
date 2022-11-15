@@ -1,217 +1,52 @@
-from __future__ import annotations
-from dataclasses import dataclass
+import os
+from pathlib import Path
 from copy import deepcopy
-from typing import Optional, Callable, Any, TypeAlias
-from numbers import Real
 
-from sageleaf import semantics as p
-
-PythonValue: TypeAlias = str | int | float | bool | Callable
+from sageleaf import ast
+from sageleaf.syntax import Lexer
+from sageleaf.semantics import Parser
 
 
-@dataclass
-class PrimitiveType:
-    name: str
-    is_member: Callable[[PythonValue], bool]
-    effectful: bool = False
-
-    def __str__(self: PrimitiveType) -> str:
-        return self.name
+class RuntimeException(Exception):
+    """Error raised during runtime execution."""
 
 
-@dataclass
-class FunctionType:
-    input_type: Type
-    output_type: Type
-    is_member: Callable[[PythonValue], bool]
-    effectful: bool = False
+class Interpreter:
+    def __init__(self):
+        self._env = {}
 
-    @property
-    def name(self) -> str:
-        left = (
-            str(self.input_type)
-            if isinstance(self.input_type, PrimitiveType)
-            else f"({self.input_type})"
-        )
-        right = (
-            str(self.output_type)
-            if isinstance(self.output_type, PrimitiveType)
-            else f"({self.output_type})"
-        )
-        return f"{left} -> {right}"
+    def _throw(msg: str):
+        print(f"Exception: {msg}")
 
-    def __str__(self: FunctionType) -> str:
-        return self.name
+    def program(self, p: ast.Prog):
+        for s in p.s:
+            self.statement(s)
 
+    def statement(self, s: ast.Stmnt):
+        if isinstance(s, ast.Req):
+            self.require(s.p)
+        elif isinstance(s, ast.Def):
+            self._env[s.idf] = s.e
 
-Type: TypeAlias = PrimitiveType | FunctionType
-
-
-@dataclass
-class Value:
-    type: Type
-    python_value: PythonValue
-
-    def __str__(self: Value) -> str:
-        if isinstance(self.type, FunctionType) or isinstance(
-            self.python_value, Callable
-        ):
-            return f"λ :: {self.type}"
-        elif isinstance(self.type, PrimitiveType):
-            return f"{self.python_value} :: {self.type}"
-
-
-@dataclass
-class Binding:
-    name: str
-    type: p.Type
-    expression: p.Expression
-    environment: RuntimeEnvironment
-
-
-@dataclass
-class RuntimeEnvironment:
-    types: dict[str, Type]
-    bindings: dict[str, Binding | Value]
-
-
-BASE_TYPES = {
-    "Void": PrimitiveType("Void", lambda _: False),
-    "Any": PrimitiveType("Any", lambda _: True),
-    "Unit": PrimitiveType("Unit", lambda x: x == "Unit"),
-    "Real": PrimitiveType("Real", lambda x: isinstance(x, (float, int))),
-}
-
-BASE_BINDINGS = {
-    "Unit": Value(BASE_TYPES["Unit"], "Unit"),
-    "add": Value(
-        FunctionType(
-            BASE_TYPES["Real"],
-            FunctionType(
-                BASE_TYPES["Real"],
-                BASE_TYPES["Real"],
-                lambda x: isinstance(x, Callable),
-            ),
-            lambda x: isinstance(x, Callable),
-        ),
-        lambda x: lambda y: x + y,
-    ),
-    "print": Value(
-        FunctionType(
-            BASE_TYPES["Any"], BASE_TYPES["Unit"], lambda x: isinstance(
-                x, Callable)
-        ),
-        lambda x: [print(x), "Unit"][-1],
-    ),
-}
-
-
-def interpret(tree: p.SyntaxTree) -> None:
-    env = RuntimeEnvironment(BASE_TYPES, BASE_BINDINGS)
-    value = evaluate_expr(env, tree.expression)
-    print(value)
-
-
-def interpret_statement(
-    env: RuntimeEnvironment, statement: p.Statement
-) -> tuple[RuntimeEnvironment, Value]:
-    if isinstance(statement, p.Expression):
-        value = evaluate_expr(env, statement)
-        return env, value
-    elif isinstance(statement, p.Binding):
-        return interpret_binding(env, statement), BASE_BINDINGS["Unit"]
-    elif isinstance(statement, p.Import):
-        pass
-    elif isinstance(statement, p.Export):
-        pass
-    else:
-        raise Exception(f"Unrecognised statement type {type(statement)}.")
-
-
-def evaluate_expr(env: RuntimeEnvironment, expr: p.Expression) -> Value:
-    value = None
-    for idx in range(len(expr.terms)):
-        new_value = evaluate_term(env, expr.terms[idx])
-        if value is None:
-            value = new_value
+    def require(self, p: str):
+        if p.startswith("sage."):
+            path = os.path.dirname(__file__) + \
+                "/builtins/" + p.removeprefix("sage.")
+        elif os.path.isfile(p):
+            path = p
         else:
-            value = evaluate_application(value, new_value)
-    return value
+            raise RuntimeException(f"Invalid module path {p}.")
+        path += ".sage"
+        code = Path(path).read_text()
+        tokens = Lexer(code).lex()
+        prog = Parser(tokens).parse()
+        self.program(prog)
 
+    def run_main(self):
+        print(self.expression(self._env["main"], deepcopy(self._env)))
 
-def evaluate_application(func: Value, parameter: Value) -> Value:
-    if isinstance(func.type, FunctionType):
-        if func.type.input_type.is_member(parameter.python_value):
-            python_value = func.python_value(parameter.python_value)
-            output_type = func.type.output_type
-            return Value(output_type, python_value)
-        else:
-            raise Exception(
-                f"Function {func} expected a parameter of type {func.type.input_type}."
-            )
-    elif func.type == BASE_TYPES["Any"]:
-        python_value = func.python_value(parameter.python_value)
-        return Value(BASE_TYPES["Any"], python_value)
-    else:
-        raise Exception(
-            f"Attempting to apply a non-function type {func.type}.")
-
-
-def evaluate_term(env: RuntimeEnvironment, term: p.Term) -> Value:
-    if isinstance(term, p.Real):
-        return Value(BASE_TYPES["Real"], term.value)
-    elif isinstance(term, p.Identifier):
-        if term.name not in env.bindings:
-            raise Exception(f"Undefined binding {term.name}.")
-        binding = env.bindings[term.name]
-        if isinstance(binding, Value):
-            return binding
-        else:
-            return evaluate_binding(binding)
-    elif isinstance(term, p.Block):
-        block_env = deepcopy(env)
-        last_value = BASE_BINDINGS["Unit"]
-        for statement in term.statements:
-            block_env, last_value = interpret_statement(block_env, statement)
-        return last_value
-    else:
-        raise Exception(f"Unrecognised term type {type(term)}.")
-
-
-def interpret_binding(
-    env: RuntimeEnvironment, binding: p.Binding
-) -> RuntimeEnvironment:
-    binding_type = interpret_type(env, binding.type)
-
-    env.bindings[binding.identifier.name] = Binding(
-        binding.identifier.name, binding_type, binding.expression, deepcopy(
-            env)
-    )
-
-    return env
-
-
-def evaluate_binding(binding: Binding) -> Value:
-    value = evaluate_expr(binding.environment, binding.expression)
-
-    # Type check that the value is a member of the specified type.
-    if binding.type.is_member(value.python_value):
-        return Value(binding.type, value.python_value)
-    else:
-        raise Exception(
-            f"Binding to `{binding.name}` expected a value of type {binding.type}."
-        )
-
-
-def interpret_type(env: RuntimeEnvironment, type: p.Type) -> Type:
-    if isinstance(type, p.PrimitiveType):
-        if type.identifier.name in env.types:
-            return env.types[type.identifier.name]
-        else:
-            raise Exception(f"Undefined type {type.identifier.name}.")
-    else:
-        return FunctionType(
-            interpret_type(env, type.input_type),
-            interpret_type(env, type.output_type),
-            lambda x: isinstance(x, Callable),
-        )
+# Appl | Let | Map | Str | Num | Bool | Idf
+    @staticmethod
+    def expression(expr: ast.Expr, env: dict[str, ast.Expr]):
+        if isinstance(expr, ast.Bool):
+            pass

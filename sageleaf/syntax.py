@@ -27,7 +27,7 @@ class TT(Enum):
     STRING = auto()
 
     # keywords
-    IMPORT = auto()
+    REQUIRE = auto()
     DEF = auto()
     AS = auto()
     LET = auto()
@@ -36,7 +36,6 @@ class TT(Enum):
     IF = auto()
     THEN = auto()
     ELSE = auto()
-    UNIT = auto()
 
     # identifiers including any numbers
     ID = auto()
@@ -80,8 +79,8 @@ PATTERNS = {
 
     r"\".*\"": TT.STRING,
 
-    r"import": TT.IMPORT,
-    r"def": TT.DEF,
+    r"require": TT.REQUIRE,
+    r"define": TT.DEF,
     r"as": TT.AS,
     r"let": TT.LET,
     r"be": TT.BE,
@@ -89,7 +88,6 @@ PATTERNS = {
     r"if": TT.IF,
     r"then": TT.THEN,
     r"else": TT.ELSE,
-    r"unit": TT.UNIT,
 
     r"[^ \t\n;,\(\)\[\]\{\}\"]+": TT.ID,  # any symbol not used otherwise
 }

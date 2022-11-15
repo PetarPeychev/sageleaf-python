@@ -21,12 +21,6 @@ class Parser:
     def _at_end(self):
         return self._idx >= len(self._ts)
 
-    def _match(self, *tts):
-        if self._check(tts):
-            self._advance()
-            return True
-        return False
-
     def _match_or_error(self, *tts, msg):
         for tt in tts:
             if self._check(tt):
@@ -68,18 +62,18 @@ class Parser:
         return ast.Prog(stmnts)
 
     def p_stmnt(self):
-        if self._check(TT.IMPORT):
-            return self.p_import()
+        if self._check(TT.REQUIRE):
+            return self.p_require()
         elif self._check(TT.DEF):
             return self.p_def()
         else:
             self._error("Unrecognised start of statement.")
 
-    def p_import(self):
+    def p_require(self):
         self._advance()
         idf = self._match_or_error(
-            TT.ID, msg="Expected module identifier in import statement.")
-        return ast.Imp(idf)
+            TT.STRING, msg="Expected module in require statement.")
+        return ast.Req(idf.lexeme[1:-1])
 
     def p_def(self):
         self._advance()
@@ -113,8 +107,12 @@ class Parser:
                 expr = ast.Str(string)
             elif self._check(TT.ID):
                 idf = self._advance().lexeme
-                if self.p_num(idf):
+                if self.p_num(idf) is not None:
                     expr = self.p_num(idf)
+                elif idf == "True":
+                    expr = ast.Bool(True)
+                elif idf == "False":
+                    expr = ast.Bool(False)
                 else:
                     expr = idf
             exprs.append(expr)
@@ -134,4 +132,32 @@ class Parser:
             return None
 
     def p_map(self):
-        raise NotImplementedError()
+        self._match_or_error(
+            TT.LCURLY, msg="Expected left curly bracket in start of map.")
+        elements = []
+        if not self._check(TT.RCURLY):
+            elements.append(self.p_arrow())
+            while self._check(TT.COMMA):
+                self._advance()
+                elements.append(self.p_arrow())
+        self._match_or_error(
+            TT.RCURLY, msg="Expected right curly bracket in end of map.")
+        return ast.Map(elements)
+
+    def p_arrow(self):
+        if self._peek().lexeme == "any":
+            self._advance()
+            idf = self._match_or_error(
+                TT.ID, msg="Expected identifier in wildcard.")
+            if self._peek().lexeme == "where":
+                self._advance()
+                cond = self.p_expr()
+                e1 = ast.Wildcard(idf, cond)
+            else:
+                e1 = ast.Wildcard(idf, None)
+        else:
+            e1 = self.p_expr()
+        self._match_or_error(
+            TT.ARROW, msg="Expected arrow in map element.")
+        e2 = self.p_expr()
+        return (e1, e2)

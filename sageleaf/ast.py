@@ -1,53 +1,65 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from types import NoneType
 
 
 @dataclass
 class Prog:
-    stmnts: list[Stmnt]
+    s: list[Stmnt]
 
 
 @dataclass
-class Imp:
-    path: Idf
+class Req:
+    p: Idf
 
 
 @dataclass
 class Def:
     idf: str
-    expr: Expr
+    e: Expr
 
 
 @dataclass
 class Appl:
-    expr1: Expr
-    expr2: Expr
+    e1: Expr
+    e2: Expr
 
 
 @dataclass
 class Map:
-    pairs: list[tuple[Expr, Expr]]
+    p: list[tuple[Expr | Wildcard, Expr]]
+
+
+@dataclass
+class Wildcard:
+    idf: str
+    e: Expr | NoneType
 
 
 @dataclass
 class Let:
     idf: str
-    expr1: Expr
-    expr2: Expr
+    e1: Expr
+    e2: Expr
 
 
 @dataclass
 class Str:
-    string: str
+    s: str
 
 
 @dataclass
 class Num:
-    number: float
+    n: float
+
+
+@dataclass
+class Bool:
+    b: bool
 
 
 Idf = str
 
-Expr = Appl | Let | Map | Str | Num | Idf
+Expr = Appl | Let | Map | Str | Num | Bool | Idf
 
-Stmnt = Imp | Def | Expr
+Stmnt = Req | Def
